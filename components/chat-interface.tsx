@@ -19,7 +19,6 @@ const SUGGESTED_PROMPTS = [
 export function ChatInterface() {
   const [input, setInput] = useState("")
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLTextAreaElement>(null)
 
   const { messages, sendMessage, status } = useChat({
     transport: new DefaultChatTransport({ api: "/api/chat" }),
@@ -38,16 +37,8 @@ export function ChatInterface() {
     setInput("")
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault()
-      handleSubmit()
-    }
-  }
-
   return (
     <div className="flex flex-col h-full">
-      {/* Messages Area */}
       <div className="flex-1 overflow-y-auto px-4 py-6 md:px-8">
         <div className="max-w-3xl mx-auto space-y-6">
           {messages.length === 0 && (
@@ -59,7 +50,7 @@ export function ChatInterface() {
                 HVAC Margin Rescue Agent
               </h2>
               <p className="text-muted-foreground text-sm max-w-md text-center mb-8 leading-relaxed">
-                {"I'm an autonomous AI agent that scans your HVAC project portfolio, investigates margin erosion, and produces actionable intelligence. Ask me anything about your projects."}
+                {"I'm an autonomous AI agent that scans your HVAC project portfolio, investigates margin erosion, and produces actionable intelligence."}
               </p>
               <div className="flex flex-wrap gap-2 justify-center max-w-lg">
                 {SUGGESTED_PROMPTS.map((prompt) => (
@@ -76,22 +67,17 @@ export function ChatInterface() {
           )}
 
           {messages.map((message) => (
-            <div key={message.id} className="animate-fade-in">
+            <div key={message.id}>
               {message.role === "user" ? (
                 <div className="flex gap-3">
                   <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-secondary flex items-center justify-center mt-0.5">
                     <User className="h-3.5 w-3.5 text-muted-foreground" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-muted-foreground mb-1">
-                      You
-                    </p>
+                    <p className="text-sm font-medium text-muted-foreground mb-1">You</p>
                     <p className="text-sm text-foreground">
                       {message.parts
-                        ?.filter(
-                          (p): p is { type: "text"; text: string } =>
-                            p.type === "text"
-                        )
+                        .filter((p): p is { type: "text"; text: string } => p.type === "text")
                         .map((p) => p.text)
                         .join("")}
                     </p>
@@ -103,44 +89,31 @@ export function ChatInterface() {
                     <Bot className="h-3.5 w-3.5 text-primary" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-primary mb-1">
-                      Agent
-                    </p>
+                    <p className="text-sm font-medium text-primary mb-1">Agent</p>
                     <div className="text-sm">
-                      {message.parts?.map((part, index) => {
+                      {message.parts.map((part, index) => {
                         if (part.type === "text" && part.text) {
-                          return (
-                            <MarkdownRenderer
-                              key={index}
-                              content={part.text}
-                            />
-                          )
+                          return <MarkdownRenderer key={index} content={part.text} />
                         }
                         if (part.type === "step-start") {
                           return null
                         }
-                        // Handle tool invocations
-                        if (
-                          "toolName" in part &&
-                          typeof part.toolName === "string"
-                        ) {
+                        if (part.type.startsWith("tool-")) {
+                          const toolPart = part as {
+                            type: string
+                            toolName: string
+                            toolCallId: string
+                            state: string
+                            input: Record<string, unknown>
+                            output?: unknown
+                          }
                           return (
                             <ToolActivity
                               key={index}
-                              toolName={part.toolName}
-                              input={
-                                "input" in part
-                                  ? (part.input as Record<string, unknown>)
-                                  : {}
-                              }
-                              output={
-                                "output" in part ? part.output : undefined
-                              }
-                              state={
-                                "state" in part
-                                  ? (part.state as string)
-                                  : "input-available"
-                              }
+                              toolName={toolPart.toolName}
+                              input={toolPart.input}
+                              output={toolPart.output}
+                              state={toolPart.state}
                             />
                           )
                         }
@@ -164,35 +137,38 @@ export function ChatInterface() {
         </div>
       </div>
 
-      {/* Input Area */}
       <div className="border-t border-border bg-background/80 backdrop-blur-sm px-4 py-3 md:px-8">
         <div className="max-w-3xl mx-auto">
-          <div className="flex items-end gap-2 bg-card border border-border rounded-xl px-4 py-2 focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/20 transition-all">
-            <textarea
-              ref={inputRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Ask about your portfolio, a specific project, or request an action..."
-              className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground resize-none outline-none min-h-[36px] max-h-[120px] py-1.5"
-              rows={1}
-              disabled={isLoading}
-            />
-            <button
-              onClick={() => handleSubmit()}
-              disabled={!input.trim() || isLoading}
-              className={cn(
-                "flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-lg transition-colors",
-                input.trim() && !isLoading
-                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                  : "bg-secondary text-muted-foreground cursor-not-allowed"
-              )}
-            >
-              <Send className="h-3.5 w-3.5" />
-            </button>
-          </div>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              handleSubmit()
+            }}
+          >
+            <div className="flex items-end gap-2 bg-card border border-border rounded-xl px-4 py-2 focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/20 transition-all">
+              <input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Ask about your portfolio, a specific project, or request an action..."
+                className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none py-1.5"
+                disabled={isLoading}
+              />
+              <button
+                type="submit"
+                disabled={!input.trim() || isLoading}
+                className={cn(
+                  "flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-lg transition-colors",
+                  input.trim() && !isLoading
+                    ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                    : "bg-secondary text-muted-foreground cursor-not-allowed"
+                )}
+              >
+                <Send className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </form>
           <p className="text-[10px] text-muted-foreground/60 mt-1.5 text-center">
-            Agent analyzes ~18K records across 5 projects. Responses may take a moment as it reasons through the data.
+            Agent analyzes ~18K records across 5 projects. Responses may take a moment.
           </p>
         </div>
       </div>

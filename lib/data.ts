@@ -51,15 +51,23 @@ function castValue(val: string): string | number | boolean {
 }
 
 function loadCSV<T>(filename: string): T[] {
-  const content = readFileSync(path.join(DATA_DIR, filename), "utf-8")
-  const rows = parseCSV(content)
-  return rows.map((row) => {
-    const typed: Record<string, unknown> = {}
-    for (const [key, val] of Object.entries(row)) {
-      typed[key] = castValue(val)
-    }
-    return typed as T
-  })
+  try {
+    const filePath = path.join(DATA_DIR, filename)
+    console.log("[v0] Loading CSV:", filePath)
+    const content = readFileSync(filePath, "utf-8")
+    console.log("[v0] CSV loaded, rows:", content.split("\n").length - 1)
+    const rows = parseCSV(content)
+    return rows.map((row) => {
+      const typed: Record<string, unknown> = {}
+      for (const [key, val] of Object.entries(row)) {
+        typed[key] = castValue(val)
+      }
+      return typed as T
+    })
+  } catch (error) {
+    console.error("[v0] Failed to load CSV:", filename, error)
+    return []
+  }
 }
 
 export interface Contract {
@@ -200,7 +208,6 @@ export interface BillingLineItem {
   application_number: number
 }
 
-// Cache loaded data in module scope
 let _contracts: Contract[] | null = null
 let _sov: SOVLine[] | null = null
 let _sovBudget: SOVBudget[] | null = null
