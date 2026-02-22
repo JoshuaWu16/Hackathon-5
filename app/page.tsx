@@ -30,9 +30,12 @@ export default function Home() {
     }
   }, [messages])
 
+  console.log("[v0] Chat status:", status, "Messages:", messages.length)
+
   const handleSubmit = (text?: string) => {
     const value = text || input.trim()
     if (!value) return
+    console.log("[v0] Sending message:", value)
     sendMessage({ text: value })
     setInput("")
   }
