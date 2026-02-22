@@ -24,7 +24,7 @@ export function ChatInterface() {
     transport: new DefaultChatTransport({ api: "/api/chat" }),
   })
 
-  const isLoading = status === "streaming" || status === "submitted"
+  const isLoading = status !== "ready"
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -92,28 +92,22 @@ export function ChatInterface() {
                     <p className="text-sm font-medium text-primary mb-1">Agent</p>
                     <div className="text-sm">
                       {message.parts.map((part, index) => {
-                        if (part.type === "text" && part.text) {
-                          return <MarkdownRenderer key={index} content={part.text} />
+                        if (part.type === "text") {
+                          return part.text ? <MarkdownRenderer key={index} content={part.text} /> : null
                         }
                         if (part.type === "step-start") {
                           return null
                         }
                         if (part.type.startsWith("tool-")) {
-                          const toolPart = part as {
-                            type: string
-                            toolName: string
-                            toolCallId: string
-                            state: string
-                            input: Record<string, unknown>
-                            output?: unknown
-                          }
+                          const toolName = part.type.replace("tool-", "")
+                          const toolPart = part as Record<string, unknown>
                           return (
                             <ToolActivity
                               key={index}
-                              toolName={toolPart.toolName}
-                              input={toolPart.input}
+                              toolName={toolName}
+                              input={(toolPart.input as Record<string, unknown>) ?? {}}
                               output={toolPart.output}
-                              state={toolPart.state}
+                              state={(toolPart.state as string) ?? "input-available"}
                             />
                           )
                         }
