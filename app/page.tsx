@@ -20,7 +20,9 @@ export default function Home() {
   const [input, setInput] = useState("")
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  const { messages, sendMessage, status } = useChat({ transport })
+  const { messages, sendMessage, status, error } = useChat({ transport })
+
+  console.log("[v0] Chat status:", status, "Messages:", messages.length, "Error:", error?.message)
 
   const isLoading = status === "streaming" || status === "submitted"
 
@@ -89,6 +91,13 @@ export default function Home() {
           {messages.map((message) => (
             <ChatMessage key={message.id} message={message} />
           ))}
+
+          {error && (
+            <div className="my-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+              <p className="font-medium">Error</p>
+              <p>{error.message}</p>
+            </div>
+          )}
 
           {isLoading && messages.length > 0 && (
             <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">

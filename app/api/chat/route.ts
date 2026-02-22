@@ -26,13 +26,14 @@ When asked "How's my portfolio doing?" or similar broad questions, proactively s
 Communicate in clear business English. Reference specific project names, dollar amounts, and percentages.`
 
 export async function POST(req: Request) {
-  console.log("[v0] Chat API called")
-  const { messages }: { messages: UIMessage[] } = await req.json()
-  console.log("[v0] Messages count:", messages.length)
-  console.log("[v0] Last message parts:", JSON.stringify(messages[messages.length - 1]?.parts))
+  try {
+    console.log("[v0] Chat API called")
+    const { messages }: { messages: UIMessage[] } = await req.json()
+    console.log("[v0] Messages count:", messages.length)
+    console.log("[v0] Last message parts:", JSON.stringify(messages[messages.length - 1]?.parts))
 
-  const result = streamText({
-    model: "anthropic/claude-sonnet-4",
+    const result = streamText({
+      model: "openai/gpt-4o",
     system: systemPrompt,
     messages: await convertToModelMessages(messages),
     abortSignal: req.signal,
@@ -263,7 +264,14 @@ export async function POST(req: Request) {
     stopWhen: stepCountIs(15),
   })
 
-  return result.toUIMessageStreamResponse({
-    originalMessages: messages,
-  })
+    return result.toUIMessageStreamResponse({
+      originalMessages: messages,
+    })
+  } catch (error) {
+    console.error("[v0] Chat API error:", error)
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    )
+  }
 }
