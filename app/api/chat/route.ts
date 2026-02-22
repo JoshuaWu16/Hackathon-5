@@ -20,10 +20,10 @@ export async function POST(req: Request) {
     stopWhen: stepCountIs(15),
     toolChoice: "auto",
     maxOutputTokens: 16000,
-    onStepFinish: ({ stepType, toolCalls }) => {
+    onStepFinish: ({ toolCalls }) => {
       if (toolCalls && toolCalls.length > 0) {
         console.log(
-          `[Agent] Step (${stepType}): ${toolCalls.map((tc) => tc.toolName).join(", ")}`
+          `[Agent] Step: ${toolCalls.map((tc) => tc.toolName).join(", ")}`
         )
       }
     },
