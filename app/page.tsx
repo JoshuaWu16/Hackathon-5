@@ -22,8 +22,6 @@ export default function Home() {
 
   const { messages, sendMessage, status, error } = useChat({ transport })
 
-  console.log("[v0] Chat status:", status, "Messages:", messages.length, "Error:", error?.message)
-
   const isLoading = status === "streaming" || status === "submitted"
 
   useEffect(() => {
@@ -32,12 +30,9 @@ export default function Home() {
     }
   }, [messages])
 
-  console.log("[v0] Chat status:", status, "Messages:", messages.length)
-
   const handleSubmit = (text?: string) => {
     const value = text || input.trim()
     if (!value) return
-    console.log("[v0] Sending message:", value)
     sendMessage({ text: value })
     setInput("")
   }

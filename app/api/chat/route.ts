@@ -27,10 +27,7 @@ Communicate in clear business English. Reference specific project names, dollar 
 
 export async function POST(req: Request) {
   try {
-    console.log("[v0] Chat API called")
     const { messages }: { messages: UIMessage[] } = await req.json()
-    console.log("[v0] Messages count:", messages.length)
-    console.log("[v0] Last message parts:", JSON.stringify(messages[messages.length - 1]?.parts))
 
     const result = streamText({
       model: "openai/gpt-4o",
