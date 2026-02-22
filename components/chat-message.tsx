@@ -40,7 +40,6 @@ export function ChatMessage({ message }: { message: UIMessage }) {
           <div className="flex flex-col gap-1">
             {toolInvocations.map((part, i) => {
               if (part.type !== "tool-invocation") return null
-              const inv = part.toolInvocation
               return (
                 <div
                   key={i}
@@ -49,14 +48,14 @@ export function ChatMessage({ message }: { message: UIMessage }) {
                   <span
                     className={cn(
                       "h-1.5 w-1.5 rounded-full",
-                      inv.state === "output-available"
+                      part.state === "output-available"
                         ? "bg-emerald-500"
                         : "bg-amber-500 animate-pulse"
                     )}
                   />
                   <span>
-                    {inv.toolName}
-                    {inv.state !== "output-available" && "..."}
+                    {part.toolCallId}
+                    {part.state !== "output-available" && "..."}
                   </span>
                 </div>
               )
