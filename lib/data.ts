@@ -1,7 +1,24 @@
-import { readFileSync } from "fs"
+import { readFileSync, existsSync } from "fs"
 import path from "path"
 
-const DATA_DIR = path.join(process.cwd(), "hvac_construction_dataset")
+function findDataDir(): string {
+  const candidates = [
+    path.join(process.cwd(), "hvac_construction_dataset"),
+    "/vercel/share/v0-project/hvac_construction_dataset",
+    path.join(process.cwd(), "..", "hvac_construction_dataset"),
+    path.join(process.cwd(), "..", "v0-project", "hvac_construction_dataset"),
+  ]
+  for (const dir of candidates) {
+    if (existsSync(dir)) {
+      console.log("[v0] Found data dir at:", dir)
+      return dir
+    }
+  }
+  console.error("[v0] DATA DIR NOT FOUND. Tried:", candidates.join(", "))
+  return candidates[0]
+}
+
+const DATA_DIR = findDataDir()
 
 function parseCSV(content: string): Record<string, string>[] {
   const lines = content.split("\n").filter((l) => l.trim())
