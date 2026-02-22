@@ -34,6 +34,7 @@ export function ChatInterface() {
   const handleSubmit = (text?: string) => {
     const message = text || input.trim()
     if (!message || isLoading) return
+    console.log("[v0] Sending message:", message)
     sendMessage({ text: message })
     setInput("")
   }
