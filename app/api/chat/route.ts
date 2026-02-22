@@ -1,5 +1,4 @@
 import {
-  consumeStream,
   convertToModelMessages,
   streamText,
   UIMessage,
@@ -7,7 +6,7 @@ import {
   stepCountIs,
 } from "ai"
 import { z } from "zod"
-import { loadCSV, loadAndParseCSV } from "@/lib/load-csv"
+import { loadAndParseCSV } from "@/lib/load-csv"
 
 export const maxDuration = 60
 
@@ -260,6 +259,5 @@ export async function POST(req: Request) {
 
   return result.toUIMessageStreamResponse({
     originalMessages: messages,
-    consumeSseStream: consumeStream,
   })
 }
