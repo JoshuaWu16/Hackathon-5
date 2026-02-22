@@ -254,6 +254,160 @@ export async function POST(req: Request) {
         },
       }),
     },
+      computeMarginAnalysis: tool({
+        description:
+          "Pre-compute a margin health summary for one or all projects. Compares actual labor + material costs against SOV budgets, includes billing progress, pending change orders, and an overall risk score. Use this for portfolio overviews or project-level health checks.",
+        inputSchema: z.object({
+          projectId: z
+            .string()
+            .nullable()
+            .describe("Filter by project ID. Pass null for all projects."),
+        }),
+        execute: async ({ projectId }) => {
+          const contracts = loadAndParseCSV("contracts.csv")
+          const sov = loadAndParseCSV("sov.csv")
+          const labor = loadAndParseCSV("labor_logs.csv")
+          const materials = loadAndParseCSV("material_deliveries.csv")
+          const changeOrders = loadAndParseCSV("change_orders.csv")
+          const billing = loadAndParseCSV("billing_history.csv")
+          const sovBudget = loadAndParseCSV("sov_budget.csv")
+
+          const projectIds = projectId
+            ? [projectId]
+            : contracts.map((c) => c.project_id)
+
+          const results = projectIds.map((pid) => {
+            const contract = contracts.find((c) => c.project_id === pid)
+            const contractValue = parseFloat(contract?.original_contract_value || "0")
+
+            // Actual labor cost
+            const projectLabor = labor.filter((l) => l.project_id === pid)
+            const totalLaborCost = projectLabor.reduce((sum, row) => {
+              const st = parseFloat(row.hours_st) || 0
+              const ot = parseFloat(row.hours_ot) || 0
+              const rate = parseFloat(row.hourly_rate) || 0
+              const burden = parseFloat(row.burden_multiplier) || 0
+              return sum + (st + ot * 1.5) * rate * burden
+            }, 0)
+
+            // Actual material cost
+            const projectMaterials = materials.filter((m) => m.project_id === pid)
+            const totalMaterialCost = projectMaterials.reduce(
+              (sum, row) => sum + (parseFloat(row.total_cost) || 0),
+              0
+            )
+
+            // Budget from SOV
+            const projectSOV = sov.filter((s) => s.project_id === pid)
+            const budgetedLabor = projectSOV.reduce(
+              (sum, s) =>
+                sum +
+                (parseFloat(s.scheduled_value) || 0) *
+                  (parseFloat(s.labor_pct) || 0),
+              0
+            )
+            const budgetedMaterial = projectSOV.reduce(
+              (sum, s) =>
+                sum +
+                (parseFloat(s.scheduled_value) || 0) *
+                  (parseFloat(s.material_pct) || 0),
+              0
+            )
+
+            // SOV budget (bid estimates)
+            const projectBudget = sovBudget.filter(
+              (b) => b.project_id === pid
+            )
+            const totalBudgetedCost = projectBudget.reduce(
+              (sum, b) => sum + (parseFloat(b.estimated_total_cost) || 0),
+              0
+            )
+
+            // Change orders
+            const projectCOs = changeOrders.filter(
+              (co) => co.project_id === pid
+            )
+            const approvedCOs = projectCOs.filter(
+              (co) => co.status === "Approved"
+            )
+            const pendingCOs = projectCOs.filter(
+              (co) => co.status === "Pending" || co.status === "Under Review"
+            )
+            const approvedCOValue = approvedCOs.reduce(
+              (sum, co) => sum + (parseFloat(co.amount) || 0),
+              0
+            )
+            const pendingCOValue = pendingCOs.reduce(
+              (sum, co) => sum + (parseFloat(co.amount) || 0),
+              0
+            )
+
+            // Billing
+            const projectBilling = billing.filter(
+              (b) => b.project_id === pid
+            )
+            const totalBilled = projectBilling.reduce(
+              (sum, b) => sum + (parseFloat(b.cumulative_billed) || 0),
+              0
+            )
+            const lastBill = projectBilling[projectBilling.length - 1]
+            const cumulativeBilled = parseFloat(
+              lastBill?.cumulative_billed || "0"
+            )
+            const billingPct =
+              contractValue > 0
+                ? ((cumulativeBilled / contractValue) * 100).toFixed(1)
+                : "0"
+
+            // Margin calculations
+            const totalActualCost = totalLaborCost + totalMaterialCost
+            const laborVariance = totalLaborCost - budgetedLabor
+            const materialVariance = totalMaterialCost - budgetedMaterial
+            const totalVariance = laborVariance + materialVariance
+            const marginPct =
+              contractValue > 0
+                ? (
+                    ((contractValue - totalActualCost) / contractValue) *
+                    100
+                  ).toFixed(1)
+                : "0"
+
+            // Risk score (0-100, higher = more risk)
+            let risk = 0
+            if (laborVariance > 0) risk += Math.min(40, (laborVariance / budgetedLabor) * 100)
+            if (materialVariance > 0) risk += Math.min(20, (materialVariance / budgetedMaterial) * 100)
+            if (pendingCOs.length > 3) risk += 15
+            if (pendingCOValue > contractValue * 0.05) risk += 15
+            risk = Math.min(100, Math.round(risk))
+
+            return {
+              project_id: pid,
+              project_name: contract?.project_name || "Unknown",
+              contract_value: contractValue,
+              actual_labor_cost: Math.round(totalLaborCost),
+              budgeted_labor: Math.round(budgetedLabor),
+              labor_variance: Math.round(laborVariance),
+              actual_material_cost: Math.round(totalMaterialCost),
+              budgeted_material: Math.round(budgetedMaterial),
+              material_variance: Math.round(materialVariance),
+              total_actual_cost: Math.round(totalActualCost),
+              total_budget: Math.round(totalBudgetedCost || budgetedLabor + budgetedMaterial),
+              total_variance: Math.round(totalVariance),
+              current_margin_pct: marginPct,
+              billing_pct_complete: billingPct,
+              cumulative_billed: Math.round(cumulativeBilled),
+              approved_cos: approvedCOs.length,
+              approved_co_value: Math.round(approvedCOValue),
+              pending_cos: pendingCOs.length,
+              pending_co_value: Math.round(pendingCOValue),
+              risk_score: risk,
+            }
+          })
+
+          return { marginAnalysis: results }
+        },
+      }),
+    },
     stopWhen: stepCountIs(15),
   })
 
