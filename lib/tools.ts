@@ -13,6 +13,16 @@ import {
   getBillingLineItems,
 } from "./data"
 
+interface BillingLineItemSummary {
+  sov_line_id: string
+  description: string
+  scheduled_value: number
+  total_billed: number
+  pct_complete: number
+  balance_to_finish: number
+  application_number: number
+}
+
 export const agentTools = {
   getPortfolioOverview: tool({
     description:
@@ -835,14 +845,4 @@ export const agentTools = {
       }
     },
   }),
-}
-
-interface BillingLineItemSummary {
-  sov_line_id: string
-  description: string
-  scheduled_value: number
-  total_billed: number
-  pct_complete: number
-  balance_to_finish: number
-  application_number: number
 }
