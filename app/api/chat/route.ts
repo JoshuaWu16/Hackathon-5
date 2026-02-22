@@ -253,7 +253,6 @@ export async function POST(req: Request) {
           return { sovBudget: filtered }
         },
       }),
-    },
       computeMarginAnalysis: tool({
         description:
           "Pre-compute a margin health summary for one or all projects. Compares actual labor + material costs against SOV budgets, includes billing progress, pending change orders, and an overall risk score. Use this for portfolio overviews or project-level health checks.",
