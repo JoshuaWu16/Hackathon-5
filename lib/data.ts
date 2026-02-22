@@ -1,17 +1,65 @@
-import { parse } from "csv-parse/sync"
 import { readFileSync } from "fs"
 import path from "path"
 
 const DATA_DIR = path.join(process.cwd(), "hvac_construction_dataset")
 
+function parseCSV(content: string): Record<string, string>[] {
+  const lines = content.split("\n").filter((l) => l.trim())
+  if (lines.length === 0) return []
+  const headers = parseCSVLine(lines[0])
+  return lines.slice(1).map((line) => {
+    const values = parseCSVLine(line)
+    const row: Record<string, string> = {}
+    headers.forEach((h, i) => {
+      row[h] = values[i] ?? ""
+    })
+    return row
+  })
+}
+
+function parseCSVLine(line: string): string[] {
+  const result: string[] = []
+  let current = ""
+  let inQuotes = false
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i]
+    if (ch === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"'
+        i++
+      } else {
+        inQuotes = !inQuotes
+      }
+    } else if (ch === "," && !inQuotes) {
+      result.push(current.trim())
+      current = ""
+    } else {
+      current += ch
+    }
+  }
+  result.push(current.trim())
+  return result
+}
+
+function castValue(val: string): string | number | boolean {
+  if (val === "") return val
+  if (val === "true" || val === "True") return true
+  if (val === "false" || val === "False") return false
+  const num = Number(val)
+  if (!isNaN(num) && val !== "") return num
+  return val
+}
+
 function loadCSV<T>(filename: string): T[] {
   const content = readFileSync(path.join(DATA_DIR, filename), "utf-8")
-  return parse(content, {
-    columns: true,
-    skip_empty_lines: true,
-    cast: true,
-    cast_date: false,
-  }) as T[]
+  const rows = parseCSV(content)
+  return rows.map((row) => {
+    const typed: Record<string, unknown> = {}
+    for (const [key, val] of Object.entries(row)) {
+      typed[key] = castValue(val)
+    }
+    return typed as T
+  })
 }
 
 export interface Contract {

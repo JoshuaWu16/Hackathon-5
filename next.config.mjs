@@ -1,6 +1,4 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {
-  serverExternalPackages: ["csv-parse"],
-}
+const nextConfig = {}
 
 export default nextConfig
