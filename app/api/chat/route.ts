@@ -11,6 +11,7 @@ export const maxDuration = 120
 
 export async function POST(req: Request) {
   const { messages }: { messages: UIMessage[] } = await req.json()
+  console.log("[v0] Chat API called with", messages.length, "messages")
 
   const result = streamText({
     model: "anthropic/claude-sonnet-4-20250514",
